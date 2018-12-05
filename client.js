@@ -1,809 +1,419 @@
-cov = {
-    config:{
-        log:{
-            log:false,
-            info:true,
-            warn:true,
-            error:true
-        }
-    },
-    core:{
-        error:function(...message){
-            if (cov.config.log.error){
-                console.error( ...message);
-            }
-        },
-        info:function(...message){
-            if (cov.config.log.info){
-                console.info( ...message);
-            }
-        },
-        log:function(...message){
-            if (cov.config.log.log){
-                console.log( ...message);
-            }
-        },
-        warn:function(...message){
-            if (cov.config.log.warn){
-                console.warn( ...message);
-            }
-        }
-    },
-    api:{
-        client:{
-            auth:{
-                getUsername: function( apiName){
-                    if (!cov.utils.checkType("apiName", apiName, "string")) {
-                        return false;
-                    }
-                    if (typeof cov.api.client.intern.apis[apiName] === "undefined") {
-                        cov.core.error("api [" + apiName + "] unknown");
-                        return false;
-                    }
-                    if (!cov.api.client.intern.apis[apiName].valid) {
-                        cov.core.error("api [" + apiName + "] is invalid, there have been errors while building the specs");
-                        return false;
-                    }
-                    if (cov.api.client.auth.isLoggedIn( apiName)){
-                        return cov.api.client.intern.apis[apiName].username;
-                    }
-                    return false;
-                },
-                isLoggedIn: function(apiName){
-                    if (!cov.utils.checkType("apiName", apiName, "string")) {
-                        return false;
-                    }
-                    if (typeof cov.api.client.intern.apis[apiName] === "undefined") {
-                        cov.core.error("api [" + apiName + "] unknown");
-                        return false;
-                    }
-                    if (!cov.api.client.intern.apis[apiName].valid) {
-                        cov.core.error("api [" + apiName + "] is invalid, there have been errors while building the specs");
-                        return false;
-                    }
-                    if (cov.api.client.intern.apis[apiName].loggedIn){
-                        cov.core.log( "api [" + apiName + "] is logged in");
-                    }else{
-                        cov.core.log( "api [" + apiName + "] is not logged in");
-                    }
-                    return !!cov.api.client.intern.apis[apiName].loggedIn;
-                },
-                getToken: function( apiName){
-                    let token, json;
-                    if (!cov.utils.checkType("apiName", apiName, "string")) {
-                        return "";
-                    }
-                    if (typeof cov.api.client.intern.apis[apiName] === "undefined") {
-                        cov.core.error("api [" + apiName + "] unknown");
-                        return "";
-                    }
-                    if (!cov.api.client.intern.apis[apiName].valid) {
-                        cov.core.error("api [" + apiName + "] is invalid, there have been errors while building the specs");
-                        return "";
-                    }
-                    token = cov.api.client.intern.data.get( apiName, "token");
-                    if (token === null){
-                        cov.core.log( "api [" + apiName + "] has no token");
-                        return "";
-                    }
-                    json = JSON.parse( token);
-                    cov.core.log( "api [" + apiName + "] has valid token");
-                    return typeof json.id !== "undefined" ? json.id : "";
-                },
-                isTokenClientValid: function( apiName) {
-                    let token, json, time;
-                    if (!cov.utils.checkType("apiName", apiName, "string")) {
-                        return false;
-                    }
-                    if (typeof cov.api.client.intern.apis[apiName] === "undefined") {
-                        cov.core.error("api [" + apiName + "] unknown");
-                        return false;
-                    }
-                    if (!cov.api.client.intern.apis[apiName].valid) {
-                        cov.core.error("api [" + apiName + "] is invalid, there have been errors while building the specs");
-                        return false;
-                    }
-                    if (!cov.api.client.auth.isLoggedIn(apiName)) {
-                        return false;
-                    }
-                    token = cov.api.client.intern.data.get(apiName, "token");
-                    if (token === null && token.length > 0) {
-                        cov.core.log("api [" + apiName + "] has no token");
-                        return false;
-                    }
-                    json = JSON.parse(token);
-                    if (!json.valid){
-                        cov.api.client.intern.data.set(apiName, "username", null);
-                        cov.api.client.intern.data.set(apiName, "token", null);
-                        cov.api.client.intern.data.set(apiName, "loggedIn", "false");
-                        return false;
-                    }
-                    time = Math.round((new Date()).getTime() / 1000);
-                    if (json.time_given < time - 3600){
-                        cov.api.client.intern.data.set(apiName, "username", null);
-                        cov.api.client.intern.data.set(apiName, "token", null);
-                        cov.api.client.intern.data.set(apiName, "loggedIn", "false");
-                        return false;
-                    }
-                    return true;
-                },
-                isTokenValid: function( apiName, callback){
-                    let token;
-                    if (!cov.utils.checkType("apiName", apiName, "string")) {
-                        return false;
-                    }
-                    if (typeof cov.api.client.intern.apis[apiName] === "undefined") {
-                        cov.core.error("api [" + apiName + "] unknown");
-                        return false;
-                    }
-                    if (!cov.api.client.intern.apis[apiName].valid) {
-                        cov.core.error("api [" + apiName + "] is invalid, there have been errors while building the specs");
-                        return false;
-                    }
-                    if (!cov.api.client.auth.isLoggedIn( apiName)){
-                        if (typeof callback === "function"){
-                            callback( false);
-                        }
-                        return false;
-                    }
-                    if (!cov.api.client.auth.isTokenClientValid( apiName)){
-                        if (typeof callback === "function"){
-                            callback(false);
-                        }
-                        return false;
-                    }
-                    token = cov.api.client.auth.getToken( apiName);
-                    if (token !== null && token.length > 0){
-                        /**
+if(typeof cov=== "undefined"){cov={};}if(typeof cov.api==="undefined"){cov.api={};}
 
 
-                        CALL TO SERVER TO VERIFY
-
-                        */
-                        if (typeof callback === "function"){
-                            callback(true);
-                        }
-                        return true;
-                    }else{
-                        cov.api.client.intern.data.set(apiName, "username", null);
-                        cov.api.client.intern.data.set(apiName, "token", null);
-                        cov.api.client.intern.data.set(apiName, "loggedIn", "false");
-                        if (typeof callback === "function"){
-                            callback( false);
-                            return false;
-                        }
-                    }
-                },
-                refreshToken: function( apiName, callback){
-                    let token;
-                    if (!cov.utils.checkType("apiName", apiName, "string")) {
-                        return false;
-                    }
-                    if (typeof cov.api.client.intern.apis[apiName] === "undefined") {
-                        cov.core.error("api [" + apiName + "] unknown");
-                        return false;
-                    }
-                    if (!cov.api.client.intern.apis[apiName].valid) {
-                        cov.core.error("api [" + apiName + "] is invalid, there have been errors while building the specs");
-                        return false;
-                    }
-                    if (!cov.api.client.auth.isLoggedIn( apiName)){
-                        if (typeof callback === "function"){
-                            callback( false);
-                        }
-                        return false;
-                    }
-                    token = cov.api.client.auth.getToken( apiName);
-                    if (token !== null && token.length > 0){
-                        /**
-
-                        CALL TO SERVER TO GET TOKEN
+cov.api.rest={};
+cov.api.node={};
 
 
-                        */
-                        if (typeof callback === "function"){
-                            callback(false);
-                        }
-                        return false;
-                    }else{
-                        cov.api.client.intern.data.set(apiName, "username", null);
-                        cov.api.client.intern.data.set(apiName, "token", null);
-                        cov.api.client.intern.data.set(apiName, "loggedIn", "false");
-                        if (typeof callback === "function"){
-                            callback( false);
-                            return false;
-                        }
-                    }
-                },
-                login: function(apiName,username,password,callback){
-                    if (!cov.utils.checkType("apiName", apiName, "string")) {
-                        return false;
-                    }
-                    if (typeof cov.api.client.intern.apis[apiName] === "undefined") {
-                        cov.core.error("api [" + apiName + "] unknown");
-                        return false;
-                    }
-                    if (!cov.api.client.intern.apis[apiName].valid) {
-                        cov.core.error("api [" + apiName + "] is invalid, there have been errors while building the specs");
-                        return false;
-                    }
-                    if (!cov.utils.checkType("username", username, "string") || !cov.utils.checkType("password", password, "string")) {
-                        return false;
-                    }
-                    if (username.length < 1 || password.length < 1){
-                        cov.core.error( "username and password must be at least 1 character");
-                        return false;
-                    }
-                    let xHTTP = new XMLHttpRequest();
-                    xHTTP.data = {};
-                    xHTTP.data.callback = callback;
-                    xHTTP.onreadystatechange = function( ){
-                        if (this.readyState === 4){
-                            let json = JSON.parse(this.responseText);
-                            if (json.status.http.code === 200){
-                                cov.api.client.intern.data.set(apiName, "username", json.response.username);
-                                cov.api.client.intern.data.set(apiName, "token", JSON.stringify(json.response.token));
-                                cov.api.client.intern.data.set(apiName, "loggedIn", "true");
-                                cov.api.client.intern.apis[apiName].loggedIn = true;
-                                cov.api.client.intern.apis[apiName].username = json.response.username;
-                                if (typeof this.data.callback === "function"){
-                                    cov.core.log( "calling callback for login in api [" + apiName + "]");
-                                    this.data.callback( true, json.response.username);
-                                }else{
-                                    cov.core.log( "no callback for login in api [" + apiName + "]");
-                                }
-                            }else if (json.status.http.code === 401){
-                                cov.api.client.intern.data.set(apiName, "username", null);
-                                cov.api.client.intern.data.set(apiName, "token", null);
-                                cov.api.client.intern.data.set(apiName, "loggedIn", "false");
-                                cov.core.log( "wrong password or username");
-                                if (typeof this.data.callback === "function"){
-                                    cov.core.log( "calling callback for login in api [" + apiName + "]");
-                                    this.data.callback( false, "wrong username or password");
-                                }else{
-                                    cov.core.log( "no callback for login in api [" + apiName + "]");
-                                }
-                            }else{
-                                cov.core.warn( "unknown error in login for api [" + apiName + "]");
-                            }
-                        }
-                    };
-                    xHTTP.open( "POST", cov.api.client.intern.apis[apiName].baseurl + "/auth/login?http=false");
-                    xHTTP.setRequestHeader( "Authorization", "Basic " + btoa( username + ":" + password));
-                    xHTTP.send();
-                    cov.core.log( "Logging in on [" + apiName +"] with username [" + username + "]");
-                    return true;
-                },
-                logout: function(apiName, callback){
-                    if (!cov.utils.checkType("apiName", apiName, "string")) {
-                        return false;
-                    }
-                    if (typeof cov.api.client.intern.apis[apiName] === "undefined") {
-                        cov.core.error("api [" + apiName + "] unknown");
-                        return false;
-                    }
-                    if (!cov.api.client.intern.apis[apiName].valid) {
-                        cov.core.error("api [" + apiName + "] is invalid, there have been errors while building the specs");
-                        return false;
-                    }
-                    cov.core.log( "Logging out of [" + apiName + "]");
-                    cov.api.client.intern.data.set(apiName, "username", null);
-                    cov.api.client.intern.data.set(apiName, "token", null);
-                    cov.api.client.intern.data.set(apiName, "loggedIn", "false");
-                    cov.api.client.intern.apis[apiName].loggedIn = false;
-                    if (typeof callback === "function"){
-                        callback();
-                    }
-                    return true;
+if (typeof cov.utils === "undefined"){
+    cov.utils={};
+}
+
+if(typeof cov.utils.httpRequest==="undefined"){cov.utils.httpRequest=(method,url,headers,body)=>new Promise((r,e)=>{const xhr=new XMLHttpRequest();xhr.open(method,url,true);xhr.onload=()=>r(xhr);xhr.onerror=()=>e(xhr);if(typeof headers==="object"){Object.keys(headers).forEach(v=>xhr.setRequestHeader(v,headers[v]));}if(typeof body!=="undefined"){xhr.send(body);}else{xhr.send();}});}
+
+
+
+
+cov.api.rest.Api = class{
+
+    addAuthFunctions(){
+        this.addRoute( "POST", "/auth/login/", "login");
+        this.addRoute( "GET", "/auth/logout/", "logout");
+        this.addRoute( "GET", "/auth/token/", "check");
+        this.addRoute( "POST", "/auth/token/", "refresh");
+        this.checkedToken = false;
+        this.auth = true;
+        this.token = localStorage.getItem(btoa(this.baseUrl) + "_token");
+        this.username = this.token === null ? null : JSON.parse(this.token).username;
+        this.buffer = [];
+        this.getToken = function(){
+            return new Promise((resolve, reject) => {
+                let token = this.token;
+                if (typeof token === "string" && token.length > 0){
+                    let json = JSON.parse(token);
+                    return resolve(json.id);
+                }else{
+                    return reject("not logged in");
                 }
-            },
-            config:{
-                addApi: function(name,baseUrl,auth=false){
-                    if (!cov.utils.checkType( "name", name, "string") || !cov.utils.checkType("baseUrl", baseUrl, "string") || !cov.utils.checkType("auth", auth, "boolean")){
-                        return false;
-                    }
-                    if (typeof cov.api.client.intern.apis[name] !== "undefined"){
-                        cov.api.client.intern.addError( name, "api declared more than once");
-                        cov.core.error( "api [" + name + "] already exists");
-                        return false;
-                    }
-                    cov.api.client.intern.apis[name] = {};
-                    cov.api.client.intern.apis[name].baseurl = baseUrl;
-                    cov.api.client.intern.apis[name].nodes = [];
-                    cov.api.client.intern.apis[name].types = [];
-                    cov.api.client.intern.apis[name].valid = true;
-                    cov.api.client.intern.apis[name].ready = false;
-                    cov.api.client.intern.apis[name].auth = auth;
-                    cov.api.client.intern.apis[name].errors = [];
-                    cov.api.client.intern.apis[name].configs = 0;
-                    cov.api.client.intern.apis[name].loggedIn = cov.api.client.intern.data.get( name, "loggedIn") === "true";
-                    cov.api.client.intern.apis[name].username = cov.api.client.intern.data.get( name, "username");
-                    cov.api.client.intern.apis[name].name = name;
-                    cov.api.client.intern.apis[name].num = cov.api.client.intern.apis.length;
-                    cov.api.client.intern.apis[cov.api.client.intern.apis[name].num] = cov.api.client.intern.apis[name];
-                    cov.core.log("new api [" + name + "]");
-                    return true;
-                },
-                addFieldToNode: function(apiName,nodeName,fieldName,fieldType){
-                    if (!cov.utils.checkType( "apiName", apiName, "string")){
-                        return false;
-                    }
-                    if (typeof cov.api.client.intern.apis[apiName] === "undefined"){
-                        cov.core.error( "api [" + apiName + "] unknown");
-                        return false;
-                    }
-                    if (cov.api.client.intern.apis[apiName].ready){
-                        cov.api.client.intern.apis[apiName].valid = false;
-                        cov.core.error( "api [" + apiName + "] already compiled, no config changes can be made");
-                        return false;
-                    }
-                    cov.api.client.intern.apis[apiName].configs++;
-                    if (!(	cov.utils.checkType( "nodeName", nodeName, "string") &&
-                        cov.utils.checkType( "fieldName", fieldName, "string") &&
-                        cov.utils.checkType( "fieldType", fieldType, "string")
-                    )){
-                        cov.api.client.intern.addError( apiName, "arguments passed aren't all strings in addFieldToNode");
-                        return false;
-                    }
-                    if (typeof cov.api.client.intern.apis[apiName].nodes[nodeName] === "undefined"){
-                        cov.api.client.intern.addError( apiName, "node [" + nodeName + "] unknown");
-                        cov.core.error( "node [" + nodeName + "] unknown in api [" + apiName + "]");
-                        return false;
-                    }
-                    if (typeof cov.api.client.intern.apis[apiName].nodes[nodeName].fields[fieldName] !== "undefined"){
-                        cov.api.client.intern.addError( apiName, "field [" + fieldName + "] already exists in node [" + nodeName + "]");
-                        cov.core.error( "field [" + fieldName + "] already exists in node [" + nodeName + "] in api [" + apiName + "]");
-                        return false;
-                    }
-                    if (!cov.api.client.intern.typeExists( apiName, fieldType)){
-                        cov.core.error( "type [" + fieldType + "] unknown in api [" + apiName + "]");
-                        cov.api.client.intern.addError( apiName, "type [" + fieldType + "] unknown");
-                        return false;
-                    }
-                    cov.api.client.intern.apis[apiName].nodes[nodeName].fields[fieldName] = {};
-                    cov.api.client.intern.apis[apiName].nodes[nodeName].fields[fieldName].type = fieldType;
-                    cov.api.client.intern.apis[apiName].nodes[nodeName].fields[fieldName].name = fieldName;
-                    cov.api.client.intern.apis[apiName].nodes[nodeName].fields[fieldName].num = cov.api.client.intern.apis[apiName].nodes[nodeName].fields.length;
-                    cov.api.client.intern.apis[apiName].nodes[nodeName].fields[cov.api.client.intern.apis[apiName].nodes[nodeName].fields[fieldName].num] = cov.api.client.intern.apis[apiName].nodes[nodeName].fields[fieldName];
-                    cov.core.log( "new Field [" + fieldName + "] of type [" + fieldType + "] in node [" + nodeName + "] in api [" + apiName + "]");
-                    return true;
-                },
-                addNode: function(apiName,nodeName){
-                    if (!cov.utils.checkType( "apiName", apiName, "string")){
-                        return false;
-                    }
-                    if (typeof cov.api.client.intern.apis[apiName] === "undefined"){
-                        cov.core.error( "api [" + apiName + "] unknown");
-                        return false;
-                    }
-                    if (cov.api.client.intern.apis[apiName].ready){
-                        cov.core.error( "api [" + apiName + "] already compiled, no config changes can be made");
-                        cov.api.client.intern.apis[apiName].valid = false;
-                        return false;
-                    }
-                    cov.api.client.intern.apis[apiName].configs++;
-                    if (!cov.utils.checkType( "nodeName", nodeName, "string")){
-                        cov.api.client.intern.addError( apiName, "nodeName must be of type string in function addNode(apiName,nodeName)");
-                        return false;
-                    }
-                    if (typeof cov.api.client.intern.apis[apiName].nodes[nodeName] !== "undefined"){
-                        cov.api.client.intern.addError( apiName, "node [" + nodeName + "] already exists");
-                        cov.core.error( "node [" + nodeName + "] already exists in api [" + apiName + "]");
-                        return false;
-                    }
-                    cov.api.client.intern.apis[apiName].nodes[nodeName] = {};
-                    cov.api.client.intern.apis[apiName].nodes[nodeName].fields = [];
-                    cov.api.client.intern.apis[apiName].nodes[nodeName].name = nodeName;
-                    cov.api.client.intern.apis[apiName].nodes[nodeName].num = cov.api.client.intern.apis[apiName].nodes.length;
-                    cov.api.client.intern.apis[apiName].nodes[cov.api.client.intern.apis[apiName].nodes[nodeName].num] = cov.api.client.intern.apis[apiName].nodes[nodeName];
-                    cov.core.log( "new Node [" + nodeName + "] in api [" + apiName + "]");
-                    return true;
-                },
-                compile: function(apiName){
-                    if (!cov.utils.checkType( "apiName", apiName, "string")){
-                        return false;
-                    }
-                    if (typeof cov.api.client.intern.apis[apiName] === "undefined"){
-                        cov.core.error( "api [" + apiName + "] unknown");
-                        return false;
-                    }
-                    if (cov.api.client.intern.apis[apiName].ready){
-                        cov.core.warn( "api [" + apiName + "] already compiled");
-                        return false;
-                    }
-                    if (!cov.api.client.intern.apis[apiName].valid){
-                        cov.core.error( "api [" + apiName + "] is invalid, errors : ");
-                        cov.core.error(cov.api.client.intern.apis[apiName].errors);
-                        return false;
-                    }
-                    let errors = [];
-                    cov.api.client.intern.apis[apiName].nodes.forEach( function (value){
-                        if (value.fields.length < 1){
-                            this[this.length] = "Node [" + value.name + "] has no fields";
+            });
+        };
+        this.login = function( username, password){
+            const _this = this;
+            return new Promise((resolve, reject) => {
+                if (typeof username !== "string" || typeof password !== "string" || username.length < 1 || password.length < 1){
+                    return reject("username and password must be set");
+                }
+                let route = _this.getRoute("POST", "login");
+                if (route === null) {
+                    return reject("the route doesn't exist");
+                }
+                let url = route.prepareUrl({});
+                if (url === null) {
+                    return reject("url couldn't be prepared");
+                }
+                url += "?http=false";
+                let headers = {};
+                headers.Authorization = "Basic " + btoa( username + ":" + password);
+                cov.utils.httpRequest( "POST", url, headers)
+                    .then(result => {
+                        let json = JSON.parse( result.responseText);
+                        if (json.status.api.message === "OK" || json.status.api.message === "Created"){
+                            localStorage.setItem( btoa(this.baseUrl)+"_token", JSON.stringify(json.response.token));
+                            this.token = JSON.stringify(json.response.token);
+                            this.username = json.response.token.username;
+                            while (_this.buffer.length > 0){
+                                _this.buffer.shift().resolve("logged in");
+                            }
+                            return resolve(json);
+                        }else{
+                            return reject(json);
                         }
-                    }, errors);
-                    if (errors.length > 0){
-                        cov.core.error( "api [" + apiName + "] is invalid : ");
-                        cov.core.error( errors);
-                        return false;
-                    }
-                    cov.api.app = {};
-                    cov.api.app[apiName] = {};
-                    cov.api.client.intern.apis[apiName].nodes.forEach( function (value){
-                        cov.api.app[apiName][value.name] = {};
-                        cov.api.app[apiName][value.name].get = function (id, fields, callBack){
-                            cov.api.client.node.get( apiName, value.name, id, callBack, fields);
-                        };
-                        cov.api.app[apiName][value.name].getAll = function( fields, callBack){
-                            cov.api.client.node.getAll( apiName, value.name, callBack, fields);
+                    })
+                    .catch(err => reject(err));
+            });
+        };
+        this.logout = function( ){
+            this.token = null;
+            this.username = null;
+            localStorage.removeItem( btoa(this.baseUrl)+"_token");
+            return this.callRoute( "GET", "logout");
+        };
+        this.refreshToken = function(){
+            const _this = this;
+            return new Promise((resolve, reject) => {
+                /**
+                 *
+                 * not yet implemented
+                 *
+                 */
+                return reject();
+            });
+        };
+        this.checkToken = function(){
+            const _this = this;
+            return new Promise((resolve, reject) => {
+                let time = Math.round((new Date()).getTime() / 1000);
+                let token = this.token;
+                if (typeof token !== "string" || token.length < 1){
+                    return reject("not logged in");
+                }
+                token = JSON.parse( token);
+                if (typeof token.valid !== "boolean" || typeof token.time_given !== "number" || typeof token.id !== "string"){
+                    return reject("token has invalid format");
+                }
+                if (!token.valid){
+                    return reject("token invalid");
+                }
+                if (token.time_given < time - 3600){
+                    return reject("token expired");
+                }
+                if (_this.checkedToken){
+                    return resolve("token valid");
+                }
+                /**
+                 *
+                 *  CALL TO SERVER TO CHECK TOKEN
+                 *
+                 */
+                _this.checkedToken = true;
+                resolve("token valid");
+
+
+
+            });
+        };
+        this.afterValid = function(waitForLogin){
+            const _this = this;
+            return new Promise((resolve, reject) => {
+                _this.checkToken()
+                    .then(resolve)
+                    .catch((err) => {
+                        if (err === "token invalid" || err === "token expired"){
+                            _this.refreshToken()
+                                .then(resolve)
+                                .catch(reject);
+                        }else if (typeof waitForLogin === "boolean" && waitForLogin){
+                            let buf = {};
+                            buf.reject = reject;
+                            buf.resolve = resolve;
+                            _this.buffer.push(buf);
+                        }else{
+                            reject("not logged in");
                         }
                     });
-                    let xHTTP = new XMLHttpRequest();
-                    xHTTP.open ("GET", cov.api.client.intern.apis[apiName].baseurl + "/?http=false");
-                    xHTTP.settings = {};
-                    xHTTP.settings.apiName = apiName;
-                    xHTTP.settings.baseurl = cov.api.client.intern.apis[apiName].baseurl;
-                    xHTTP.onreadystatechange = function(){
-                        if (this.readyState === 4){
-                            if (this.status !== 200){
-                                cov.api.client.intern.apis[this.settings.apiName].valid = false;
-                                cov.api.client.intern.apis[this.settings.apiName].ready = false;
-                                cov.core.error( "api [" + this.settings.apiName + "] has not a valid base url : " + this.settings.baseurl);
-                            }else{
-                                let json = JSON.parse( this.responseText);
-                                if (typeof json.version === "undefined"){
-                                    cov.api.client.intern.apis[this.settings.apiName].valid = false;
-                                    cov.api.client.intern.apis[this.settings.apiName].ready = false;
-                                    cov.core.error( "api [" + this.settings.apiName + "] has not a valid base url : " + this.settings.baseurl);
-                                }else{
-                                    if (typeof json.status === "undefined" || typeof json.status.http === "undefined" || typeof json.status.http.code === "undefined" || json.status.http.code !== 200){
-                                        cov.api.client.intern.apis[this.settings.apiName].valid = false;
-                                        cov.api.client.intern.apis[this.settings.apiName].ready = false;
-                                        cov.core.error( "api [" + this.settings.apiName + "] has not a valid base url : " + this.settings.baseurl);
-                                    }else{
-                                        cov.core.info( "api [" + this.settings.apiName + "] works with version [" + json.version + "]");
-                                    }
-                                }
+            });
+        };
+    }
+    static autoPrepare( base_url, version, forceUpdate = false){
+        base_url = base_url.charAt(base_url.length-1) === "/" ? base_url.substring( 0, base_url.length-1) : base_url;
+        version = typeof version!=="string"?"latest":version;
+        return new Promise((resolve,reject) => {
+                if (forceUpdate === false){
+                    let apiStorage = localStorage.getItem(btoa(base_url));
+                    let json;
+                    if (apiStorage !== null) {
+                        json = JSON.parse(apiStorage);
+                        let api = new cov.api.rest.Api(json.baseUrl, false, json.version);
+                        json.routes.forEach(r => {
+                            if (r.route === "dev") {
+                                return;
                             }
-                        }
-                    };
-                    xHTTP.send();
-                    cov.core.info( "api [" + apiName + "] compiled with " + cov.api.client.intern.apis[apiName].configs + " configuration statements, and " + cov.api.client.intern.apis[apiName].nodes.length + " nodes");
-                    cov.api.client.intern.apis[apiName].ready = true;
-                    return true;
+                            api.addRoute(r.method, r.route, r.name);
+                        });
+                        api.auth = json.auth;
+                        return resolve(api);
+                    }
                 }
-            },
-            intern:{
-                apis: [],
-                types: [
-                    "int",
-                    "string",
-                    "bool"
-                ],
-                data:{
-                    get: function(apiName,key) {
-                        if (!cov.utils.checkType("apiName", apiName, "string")) {
-                            return null;
-                        }
-                        if (typeof cov.api.client.intern.apis[apiName] === "undefined") {
-                            cov.core.error("api [" + apiName + "] unknown");
-                            return null;
-                        }
-                        cov.core.log( "getting from localStorage with key [" + key + "] from api [" + apiName + "]");
-                        return cov.utils.data.get("api[" + apiName + "[" + key + "]]");
-                    },
-                    set: function(apiName,key,value){
-                        if (!cov.utils.checkType( "apiName", apiName, "string")){
-                            return;
-                        }
-                        if (typeof cov.api.client.intern.apis[apiName] === "undefined"){
-                            cov.core.error( "api [" + apiName + "] unknown");
-                            return;
-                        }
-                        cov.core.log( "setting in localStorage with key [" + key + "] from api [" + apiName + "]");
-                        cov.utils.data.set( "api[" + apiName + "[" + key + "]]", value);
-                    }
-                },
-                fields:{
-                    parse: function(fields_str){
-                        cov.core.log( "parsing ", fields_str);
-                        let offset = 0;
-                        let fields = [];
-                        let str, firstC, firstB, firstE, name, char, subFields, i, j, index, m;
-                        while (offset < fields_str.length){
-                            str = fields_str.substr( offset);
-                            firstC = str.indexOf( ',') >= 0 ? str.indexOf( ',') : str.length;
-                            firstB = str.indexOf( '{') >= 0 ? str.indexOf( '{') : str.length;
-                            firstE = str.indexOf( '}') >= 0 ? str.indexOf( '}') : str.length;
-                            name = str.substr( 0, Math.min( firstC, firstB, firstE));
-                            char = str.substr( name.length, 1);
-                            offset += name.length + 1;
-                            subFields = [];
-                            if (char === "{"){
-                                subFields = cov.api.client.intern.fields.parse( str.substr( name.length+1));
-                                i = name.length + 1;
-                                j = 0;
-                                while (j >= 0 && i < str.length){
-                                    if (str.charAt( i) === "{"){
-                                        j++;
-                                    }
-                                    if (str.charAt( i) === "}"){
-                                        j--;
-                                    }
-                                    i++;
+                let route = new cov.api.rest.Route( base_url, "dev", "GET", "dev", version);
+                cov.utils.httpRequest( route.method, route.prepareUrl())
+                    .then(response => {
+                        let json = JSON.parse( response.responseText);
+                        let api = new cov.api.rest.Api( base_url, false, version);
+                        let u = new URL( base_url);
+                        let l = u.pathname.split( "/").length;
+                        let auth = false;
+                        json.response.routes.forEach(route => {
+                            let method = route.method;
+                            if (route.url.charAt(0) !== "/"){
+                                route.url = "/" + route.url;
+                            }
+                            let s = route.url.split("/");
+                            let url = "";
+                            s.forEach( (v,i) => {
+                                if (i >= l){
+                                    url += "/" + v;
                                 }
-                                offset += i - name.length;
+                            });
+                            if (s[l] === "auth"){
+                                auth = true;
+                            }else if (s[l] !== "dev"){
+                                api.addRoute( method, url, s[1]);
                             }
-                            index = fields.length;
-                            if (name.length < 2){
-                                cov.core.error( "Fields_str isn't of type field, the name [" + name + "] is too short");
-                                return null;
-                            }
-                            m = name.match(/^[a-zA-Z]+[a-zA-Z0-9_-]*[a-zA-Z0-9]+$/g);
-                            if (m == null || m.length !== 1){
-                                cov.core.error( "The name [" + name + "] is not a valid name for a field");
-                                return null;
-                            }
-                            fields[index] = {};
-                            fields[index].name = name;
-                            fields[index].subFields = subFields;
-                            if (char === "}"){
-                                return fields;
-                            }
+                        });
+                        if (auth){
+                            api.addAuthFunctions();
                         }
-                        return fields;
-                    }
-                },
-                network:{
-                    checkResponse: function(json){
-                        return (
-                            typeof json === "object" &&
-                            typeof json.status === "object" &&
-                            typeof json.status.http === "object" &&
-                            typeof json.status.http.code === "number" &&
-                            typeof json.status.http.message === "string" &&
-                            typeof json.status.api === "object" &&
-                            typeof json.status.api.code === "number" &&
-                            typeof json.status.api.message === "string" &&
-                            typeof json.response_time === "number" &&
-                            typeof json.version === "string" &&
-                            typeof json.response !== "undefined"
-                        );
-                    },
-                    getE: function(apiName,endpoint,callback){
-                        let url, xHTTP;
-                        if (!cov.utils.checkType( "apiName", apiName, "string")){
-                            return false;
-                        }
-                        if (typeof cov.api.client.intern.apis[apiName] === "undefined"){
-                            cov.core.error( "api [" + apiName + "] unknown");
-                            return false;
-                        }
-                        if (!cov.api.client.intern.apis[apiName].ready){
-                            cov.core.error( "api [" + apiName + "] has not yet complied, please compile before using");
-                            return false;
-                        }
-                        if (!(	cov.utils.checkType( "endpoint", endpoint, "string") &&
-                            cov.utils.checkType( "callback", callback, "function")
-                        )){
-                            return false;
-                        }
-                        if (!cov.api.client.intern.apis[apiName].valid){
-                            cov.core.warn( "api [" + apiName + "] might be unstable, there have been errors while building the specs");
-                        }
-                        url = cov.api.client.intern.apis[apiName].baseurl + "/" + endpoint;
-                        cov.core.log( "getting from api [" + apiName + "] url : " + url);
-                        xHTTP = new XMLHttpRequest();
-                        xHTTP.data = {};
-                        xHTTP.data.apiName = apiName;
-                        xHTTP.data.request = "get";
-                        xHTTP.data.callback = callback;
-                        xHTTP.onreadystatechange = cov.api.client.intern.network.responseHandler;
-                        xHTTP.open( "GET", url);
-                        if (cov.api.client.intern.apis[apiName].auth){
-                            xHTTP.setRequestHeader( "Authorization", "Bearer " + cov.api.client.auth.getToken( apiName));
-                        }
-                        xHTTP.send();
-                    },
-                    getN: function(apiName,nodeName,callback,fields,id){
-                        let url;
-                        if (!cov.utils.checkType( "apiName", apiName, "string")){
-                            return false;
-                        }
-                        if (typeof cov.api.client.intern.apis[apiName] === "undefined"){
-                            cov.core.error( "api [" + apiName + "] unknown");
-                            return false;
-                        }
-                        if (!cov.api.client.intern.apis[apiName].ready){
-                            cov.core.error( "api [" + apiName + "] has not yet complied, please compile before using");
-                            return false;
-                        }
-                        if (!(	cov.utils.checkType( "nodeName", nodeName, "string") &&
-                            cov.utils.checkType( "fields", fields, "string") &&
-                            cov.utils.checkType( "callback", callback, "function")
-                        )){
-                            return false;
-                        }
-                        if (!cov.api.client.intern.apis[apiName].valid){
-                            cov.core.warn( "api [" + apiName + "] might be unstable, there have been errors while building the specs");
-                        }
-                        if (typeof cov.api.client.intern.apis[apiName].nodes[nodeName] === "undefined"){
-                            cov.core.error( "node [" + nodeName + "] unknown in api [" + apiName + "]");
-                            return false;
-                        }
-                        if (!cov.api.client.intern.checkFields(apiName, nodeName, fields)){
-                            cov.core.error( "fields given doesn't respect the node [" + nodeName + "] from the api [" + apiName + "]");
-                            return false
-                        }
-                        if (typeof id !== "undefined"){
-                            if (typeof id !== "string" && typeof id !== "number"){
-                                cov.core.error( "id must of of type string or number, " + (typeof id) + " given");
-                                return false;
-                            }
-                            url = nodeName + "/" + id + "?http=false&fields=" + fields;
-                        }else{
-                            url = nodeName + "?http=false&fields=" + fields;
-                        }
-                        cov.api.client.intern.network.getE( apiName, url, callback);
-                    },
-                    responseHandler: function(){
-                        if (this.readyState === 4){
-                            if (this.status === 200){
-                                let json = JSON.parse(this.responseText);
-                                if (cov.api.client.intern.network.checkResponse(json)){
-                                    cov.core.log( "response from [" + this.data.apiName + "]");
-                                    this.data.callback( json.response);
-                                }else{
-                                    cov.core.error( "communication with api [" + this.data.apiName + "] server gave an unexpected error : " + this.status, json);
-                                }
-                            }else{
-                                cov.core.error( "communication with api [" + this.data.apiName + "] server gave an unexpected error : " + this.status, this.responseText);
-                            }
-                        }
-                    }
-                },
-                addError: function(apiName, error){
-                    if (typeof apiName !== "string" || typeof error !== "string"){
-                        cov.core.error( "error, apiName and error must be of type string");
-                        return;
-                    }
-                    if (typeof cov.api.client.intern.apis[apiName] === "undefined"){
-                        cov.core.error( "api [" + apiName + "] doesn't exist");
-                        return;
-                    }
-                    cov.core.log( "adding error in [" + apiName + "]");
-                    cov.api.client.intern.apis[apiName].errors[cov.api.client.intern.apis[apiName].errors.length] = error;
-                    cov.api.client.intern.apis[apiName].valid = false;
-                },
-                checkFields: function(apiName,nodeName,fields){
-                    let errors, field;
-                    if (!cov.utils.checkType( "apiName", apiName, "string") ||
-                        !cov.utils.checkType( "nodeName", nodeName, "string") ||
-                        !cov.utils.checkType( "fields", fields, "string")
-                    ){
-                        return false;
-                    }
-                    if (typeof cov.api.client.intern.apis[apiName] === "undefined"){
-                        cov.core.error( "api [" + apiName + "] unknown");
-                        return false;
-                    }
-                    if (typeof cov.api.client.intern.apis[apiName].nodes[nodeName] === "undefined"){
-                        cov.core.error( "node [" + nodeName +"] unknown in api [" + apiName + "]");
-                        return false;
-                    }
-                    field = {
-                        name: 'main',
-                        subFields: cov.api.client.intern.fields.parse( fields)
-                    };
+                        localStorage.setItem( btoa(base_url), JSON.stringify(api));
+                        resolve(api);
+                    })
+                    .catch(reject);
+        });
+    }
 
-                    if (field.subFields == null){
-                        cov.core.error( "error while parsing fields");
-                        return false;
-                    }
-                    errors = [];
-                    cov.core.log( "checking fields for node [" + nodeName + "] in api [" + apiName + "]");
-                    field.subFields.forEach( function(value){
-                        if (typeof cov.api.client.intern.apis[apiName].nodes[nodeName].fields[value.name] === "undefined"){
-                            this[this.length] = "field [" + value.name + "] doesn't exist in node [" + nodeName + "] in api [ " + apiName + "]";
-                        }else if (value.subFields.length > 0){
-                            if (cov.api.client.intern.isSubType( apiName, nodeName, value.name)){
-
-
-
-                            }else{
-                                this[this.length] = "field [" + value.name +"] in node [ " + nodeName + "] in api [" + apiName + "] has no subFields";
-                            }
-                        }else if (cov.api.client.intern.isSubType( apiName, nodeName, value.name)){
-                            this[this.length] = "field [" + value.name +"] in node [ " + nodeName + "] in api [" + apiName + "] has subFields, but none given";
-                        }
-                    }, errors);
-                    if (errors.length > 0){
-                        cov.core.error( "unknown fields :");
-                        cov.core.error( errors);
-                        return false;
-                    }
-
-                    return true;
-                },
-                isSubType: function(apiName,nodeName,fieldName){
-                    let type;
-                    if (!cov.utils.checkType( "apiName", apiName, "string") ||
-                        !cov.utils.checkType( "nodeName", nodeName, "string") ||
-                        !cov.utils.checkType( "fieldName", fieldName, "string")
-                    ){
-                        return false;
-                    }
-                    if (typeof cov.api.client.intern.apis[apiName] === "undefined"){
-                        cov.core.error( "api [" + apiName + "] unknown");
-                        return false;
-                    }
-                    if (typeof cov.api.client.intern.apis[apiName].nodes[nodeName] === "undefined"){
-                        cov.core.error( "node [" + nodeName +"] unknown in api [" + apiName + "]");
-                        return false;
-                    }
-                    if (typeof cov.api.client.intern.apis[apiName].nodes[nodeName].fields[fieldName] === "undefined"){
-                        cov.core.error( "field [" + fieldName + "] unkown in node [" + nodeName + "] in api [" + apiName + "]" );
-                        return false;
-                    }
-                    cov.core.log( "isSubType(" + apiName + "," + nodeName + "," + fieldName + ")");
-                    type = cov.api.client.intern.apis[apiName].nodes[nodeName].fields[fieldName].type;
-                    if (type.substr(-2) === "[]"){
-                        type = type.substr(0, type.length - 2);
-                    }
-                    return (typeof cov.api.client.intern.apis[apiName].nodes[type] !== "undefined" || typeof cov.api.client.intern.apis[apiName].types[type] !== "undefined");
-                },
-                typeExists: function(apiName,type){
-                    if (typeof apiName !== "string" || typeof type !== "string"){
-                        return false;
-                    }
-                    if (typeof cov.api.client.intern.apis[apiName] === "undefined"){
-                        return false;
-                    }
-                    if (type.substr(-2) === "[]"){
-                        type = type.substr(0, type.length - 2);
-                    }
-                    cov.core.log( "checking type in api [" + apiName + "]");
-                    if (cov.api.client.intern.types.includes(type)){
-                        return true;
-                    }
-                    return (typeof cov.api.client.intern.apis[apiName].nodes[type] !== "undefined" || typeof cov.api.client.intern.apis[apiName].types[type] !== "undefined");
-                }
-            },
-            node:{
-                get: function(apiName,nodeName,id,callback,fields){
-                    return cov.api.client.intern.network.getN(apiName,nodeName,callback,fields,id);
-                },
-                getAll: function(apiName,nodeName,callback,fields){
-                    return cov.api.client.intern.network.getN( apiName, nodeName, callback, fields);
-                }
-            }
+    constructor(base_url, auth, version){
+        if (base_url.charAt(base_url.length-1) === "/"){
+            base_url = base_url.substring( 0, base_url.length-1);
         }
-    },
-    utils:{
-        data:{
-            get: function(key){
-                if (typeof Storage !== "undefined"){
-                    let a = localStorage.getItem( "CoV_Store[" + btoa(key) + "]");
-                    return a === null ? null : atob(a);
-                }
-            },
-            set: function(key,value){
-                if (typeof Storage !== "undefined"){
-                    localStorage.setItem( "CoV_Store[" + btoa(key) + "]", btoa(value));
-                }
-            },
-            remove: function(key){
-                if (typeof Storage !== "undefined"){
-                    localStorage.removeItem( "CoV_Store[" + btoa(key) + "]");
-                }
-            }
-        },
-        checkType: function (name,variable,type){
-            if (typeof variable !== type){
-                cov.core.error( name + " must be of type " + type + ", " + (typeof variable) + " given");
-                return false;
-            }
-            return true;
+        this.baseUrl = base_url;
+        this.version=typeof version!=="string"?"latest":version;
+        this.routes = [];
+        this.auth=typeof auth!=="boolean"?false:auth;
+        this.addRoute( "GET", "/dev/", "dev");
+        if (this.auth){
+            this.addAuthFunctions();
         }
     }
+
+    getBaseUrl(){
+        return this.baseUrl;
+    }
+
+    addRoute( method, route, name){
+        if (route.charAt(route.length-1) === "/"){
+            route = route.substring( 0, route.length-1);
+        }
+        if (route.charAt(0) === "/"){
+            route = route.substring(1, route.length);
+        }
+        this.routes.push( new cov.api.rest.Route( this.baseUrl, route, method, name, this.version));
+    }
+
+    getRoute( method, name, parameters){
+        let i;
+        for(i = 0; i < this.routes.length; i++){
+            if (this.routes[i].name === name && this.routes[i].method === method && this.routes[i].checkArguments(parameters)){
+                return this.routes[i];
+            }
+        }
+        return null;
+    }
+
+    callRoute( method, name, parameters, url_params){
+        const _this = this;
+        return new Promise( (resolve, reject) => {
+            let route = _this.getRoute(method, name, parameters);
+            if (route === null) {
+                return reject("the route doesn't exist");
+            }
+            let url = route.prepareUrl(parameters);
+            if (url === null) {
+                return reject("url couldn't be prepared");
+            }
+            if (typeof url_params !== "object"){
+                url_params = {};
+            }
+            url_params.http = false;
+            url += "?";
+            Object.keys(url_params).forEach(value=> url+=value+"="+url_params[value]+"&");
+            let headers = {};
+            if (_this.auth) {
+                _this.getToken()
+                    .then( result => {
+                        headers.Authorization = "Bearer " + result;
+                        return cov.utils.httpRequest( method, url, headers);
+                    })
+                    .then( result => {
+                        let json = JSON.parse( result.responseText);
+                        if (json.status.api.message === "OK" || json.status.api.message === "Created"){
+                            return resolve(json);
+                        }else{
+                            return reject(json);
+                        }
+                    })
+                    .catch( err => reject(err));
+            }else{
+                cov.utils.httpRequest(method, url, headers)
+                    .then(result => {
+                        let json = JSON.parse( result.responseText);
+                        if (json.status.api.message === "OK" || json.status.api.message === "Created"){
+                            return resolve(json);
+                        }else{
+                            return reject(json);
+                        }
+                    })
+                    .catch(err => reject(err));
+            }
+        });
+    }
+
+
 };
+
+cov.api.rest.Route = class{
+
+    constructor(base_url, route, method, name, version){
+        this.base_url = base_url;
+        this.url = base_url + "/" + route;
+        this.route = route;
+        this.method = method;
+        this.name = name;
+        this.version = version;
+    }
+
+    prepareUrl(parameters){
+        let url_arr = this.url.split("/");
+        let i, url = "", reg = /^{.*}$/, n;
+        if (typeof parameters !== "object"){
+            parameters = {};
+        }
+        parameters.version = this.version;
+        for (i = 0; i < url_arr.length; i++){
+            if (reg.test(url_arr[i])){
+                n = url_arr[i].substring(1,url_arr[i].length-1);
+                if (typeof parameters[n] !== "undefined"){
+                    url += parameters[n] + "/";
+                }else{
+                    return null;
+                }
+            }else{
+                url += url_arr[i] + "/";
+            }
+        }
+        return url;
+    }
+
+    checkArguments( parameters){
+        let arr,reg,needed,has;
+        arr = this.url.split("/");
+        reg = /^{.*}$/;
+        if (typeof parameters !== "object"){
+            parameters = {};
+        }
+        parameters.version = this.version;
+        needed = arr.filter(value => reg.test(value));
+        needed = needed.map(value => value.substring(1,value.length-1));
+        has = Object.keys(parameters);
+        return needed.length === has.length;
+    }
+
+};
+
+
+cov.api.node.Api = class extends cov.api.rest.Api{
+
+    constructor(url, auth, version){
+        super(url, auth, version);
+        this.addRoute( "GET", "/node/{node}/{id}", "getNode");
+        this.addRoute( "GET", "/node/{node}", "getAllNode");
+        this.addRoute( "POST", "/node/{node}", "postNode");
+        this.nodes = [];
+    }
+
+    objectFieldToString( fields){
+        let keys = Object.keys( fields);
+        let str = "{";
+        let x = {test,bla,tickets:{test,bla}};
+    }
+
+    getAll( nodeName, fields){
+        const _this = this;
+        return new Promise((resolve,reject) => {
+            let parameters = {fields: fields};
+            _this.callRoute( "GET", "getAllNode", {node: nodeName}, parameters).then(response=>{
+                resolve(response.response);
+            }).catch(reject);
+        });
+    }
+
+    get( nodeName, id, fields){
+        const _this = this;
+        return new Promise((resolve,reject) => {
+            let parameters = {fields: fields};
+            _this.callRoute( "GET", "getNode", {node: nodeName,id: id}, parameters).then(response=>{
+                resolve(response.response);
+            }).catch(reject);
+        });
+    }
+
+
+    addNode( name, fields){
+        let node = new cov.api.node.Node(name)
+        this.nodes.push(node);
+        if (typeof fields === "object"){
+            let keys = Object.keys(fields);
+            for (let i = 0; i < keys.length; i++){
+                node.addField( keys[i], fields[keys[i]]);
+            }
+        }
+    }
+
+    getNodeObject( name){
+        for( let i = 0; i < this.nodes.length; i++){
+            if (this.nodes[i].name === name){
+                return this.nodes[i];
+            }
+        }
+        return null;
+    }
+
+    addFieldToNode( nodeName, fieldName, fieldType){
+        let node = this.getNodeObject(nodeName);
+        if (node === null){
+            return false;
+        }
+        node.addField( fieldName, fieldType);
+    }
+};
+
+
+cov.api.node.Node = class{
+
+    constructor( name){
+        this.name = name;
+        this.fields = {};
+    }
+
+    addField( name, type){
+        this.fields[name] = type;
+    }
+}
