@@ -8,6 +8,17 @@
 // we are using version v1 (we can also say "latest")
 let api = new cov.api.node.Api( "https://localhost/api/{version}/", true, "v1");
 
+/*
+
+//you can also "autobuild" the api, however, this is not recomended
+//the url : https://localhost/api/{version}/
+//version : v1
+//forceUpdate : false (this means it will save the api specification for the next time, if set to true, it will rebuild itself everytime)
+// the autoPrepate builds itself using the /dev endpoint on the api server, however at the moment only routes are supported
+let api = cov.api.rest.Api.autoPrepare( "https://localhost/api/{version}/", "v1", false);
+
+
+ */
 // adding the status route (at /api/{version}/status via a GET request)
 api.addRoute( "GET", "/status/", "status");
 
