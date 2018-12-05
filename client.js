@@ -10,28 +10,36 @@ if (typeof cov.utils === "undefined"){
 }
 
 if(typeof cov.utils.httpRequest==="undefined"){cov.utils.httpRequest=(method,url,headers,body)=>new Promise((r,e)=>{const xhr=new XMLHttpRequest();xhr.open(method,url,true);xhr.onload=()=>r(xhr);xhr.onerror=()=>e(xhr);if(typeof headers==="object"){Object.keys(headers).forEach(v=>xhr.setRequestHeader(v,headers[v]));}if(typeof body!=="undefined"){xhr.send(body);}else{xhr.send();}});}
-
+if(typeof cov.utils.isNumber==="undefined"){cov.utils.isNumber=object=>typeof object==="number";}
+if(typeof cov.utils.isString==="undefined"){cov.utils.isString=object=>(typeof object==="string")||(object instanceof String);}
+if(typeof cov.utils.isBoolean==="undefined"){cov.utils.isBoolean=object=>typeof object==="boolean";}
+if(typeof cov.utils.isUndefined==="undefined"){cov.utils.isUndefined=object=>typeof object==="undefined";}
+if(typeof cov.utils.isObject==="undefined"){cov.utils.isObject=object=>typeof object==="object";}
 
 
 
 cov.api.rest.Api = class{
 
     addAuthFunctions(){
-        this.addRoute( "POST", "/auth/login/", "login");
-        this.addRoute( "GET", "/auth/logout/", "logout");
-        this.addRoute( "GET", "/auth/token/", "check");
-        this.addRoute( "POST", "/auth/token/", "refresh");
+        this.addRoute( "POST", "/auth/login/",  "login");
+        this.addRoute( "GET",  "/auth/logout/", "logout");
+        this.addRoute( "GET",  "/auth/token/",  "check");
+        this.addRoute( "POST", "/auth/token/",  "refresh");
         this.checkedToken = false;
         this.auth = true;
         this.token = localStorage.getItem(btoa(this.baseUrl) + "_token");
         this.username = this.token === null ? null : JSON.parse(this.token).username;
         this.buffer = [];
-        this.getToken = function(){
+        this.getToken = function(c=false){
             return new Promise((resolve, reject) => {
                 let token = this.token;
                 if (typeof token === "string" && token.length > 0){
                     let json = JSON.parse(token);
-                    return resolve(json.id);
+                    if (c){
+                        return resolve(json);
+                    }else{
+                        return resolve(json.id);
+                    }
                 }else{
                     return reject("not logged in");
                 }
@@ -40,7 +48,7 @@ cov.api.rest.Api = class{
         this.login = function( username, password){
             const _this = this;
             return new Promise((resolve, reject) => {
-                if (typeof username !== "string" || typeof password !== "string" || username.length < 1 || password.length < 1){
+                if (!cov.utils.isString(username) || !cov.utils.isString(password) || username.length < 1 || password.length < 1){
                     return reject("username and password must be set");
                 }
                 let route = _this.getRoute("POST", "login");
@@ -73,20 +81,25 @@ cov.api.rest.Api = class{
             });
         };
         this.logout = function( ){
-            this.token = null;
-            this.username = null;
-            localStorage.removeItem( btoa(this.baseUrl)+"_token");
-            return this.callRoute( "GET", "logout");
+            return new Promise((resolve, reject) => {
+                this.callRoute( "GET", "logout").then(r=>{
+                    this.token = null;
+                    this.username = null;
+                    localStorage.removeItem( btoa(this.baseUrl)+"_token");
+                    resolve(r);
+                }).catch(reject);
+            });
         };
         this.refreshToken = function(){
             const _this = this;
             return new Promise((resolve, reject) => {
-                /**
-                 *
-                 * not yet implemented
-                 *
-                 */
-                return reject();
+                _this.getToken(true).then(token=>{
+                    _this.callRoute("POST", "refresh", {}, {refresh:token.refresh}).then(result=>{
+                        _this.token = JSON.stringify( result.response.token);
+                        localStorage.setItem( btoa(this.baseUrl)+"_token", _this.token);
+                        resolve( result.response.token.id);
+                    }).catch(reject);
+                }).catch(reject);
             });
         };
         this.checkToken = function(){
@@ -110,21 +123,18 @@ cov.api.rest.Api = class{
                 if (_this.checkedToken){
                     return resolve("token valid");
                 }
-                /**
-                 *
-                 *  CALL TO SERVER TO CHECK TOKEN
-                 *
-                 */
-                _this.checkedToken = true;
-                resolve("token valid");
-
-
-
+                _this.callRoute("GET", "check").then(result=>{
+                    _this.checkedToken = true;
+                    resolve("token valid");
+                }).catch(reject);
             });
         };
         this.afterValid = function(waitForLogin){
             const _this = this;
             return new Promise((resolve, reject) => {
+                if (!cov.utils.isBoolean(waitForLogin)&& !cov.utils.isUndefined(waitForLogin)){
+                    return reject("waitForLogin must be a boolean");
+                }
                 _this.checkToken()
                     .then(resolve)
                     .catch((err) => {
@@ -145,9 +155,12 @@ cov.api.rest.Api = class{
         };
     }
     static autoPrepare( base_url, version, forceUpdate = false){
-        base_url = base_url.charAt(base_url.length-1) === "/" ? base_url.substring( 0, base_url.length-1) : base_url;
-        version = typeof version!=="string"?"latest":version;
         return new Promise((resolve,reject) => {
+                if (!(cov.utils.isString(base_url) && cov.utils.isString(version) && forceUpdate.isBoolean())){
+                    return reject("wrong input types, input must be string,string,boolean");
+                }
+                base_url = base_url.charAt(base_url.length-1) === "/" ? base_url.substring( 0, base_url.length-1) : base_url;
+                version = typeof version!=="string"?"latest":version;
                 if (forceUpdate === false){
                     let apiStorage = localStorage.getItem(btoa(base_url));
                     let json;
@@ -201,6 +214,15 @@ cov.api.rest.Api = class{
     }
 
     constructor(base_url, auth, version){
+        if (!cov.utils.isString(base_url)){
+            throw new Error("base_url must be a string");
+        }
+        if (!cov.utils.isBoolean(auth) && !cov.utils.isUndefined(auth)){
+            throw new Error("auth must be a boolean");
+        }
+        if (!cov.utils.isString(version) && !cov.utils.isUndefined(version)){
+            throw new Error("version must be a string");
+        }
         if (base_url.charAt(base_url.length-1) === "/"){
             base_url = base_url.substring( 0, base_url.length-1);
         }
@@ -219,6 +241,9 @@ cov.api.rest.Api = class{
     }
 
     addRoute( method, route, name){
+        if (!cov.utils.isString(method) || !cov.utils.isString(route) || !cov.utils.isString(name)){
+            throw new Error("incorrect types, all parameters must be of type string");
+        }
         if (route.charAt(route.length-1) === "/"){
             route = route.substring( 0, route.length-1);
         }
@@ -229,6 +254,12 @@ cov.api.rest.Api = class{
     }
 
     getRoute( method, name, parameters){
+        if (!cov.utils.isString(method) || !cov.utils.isString(name)){
+            throw new Error("incorrect types, method and name must be of type string");
+        }
+        if (!cov.utils.isObject(parameters) && !cov.utils.isUndefined(parameters)){
+            throw new Error("incorrect type, parameters must be of type object");
+        }
         let i;
         for(i = 0; i < this.routes.length; i++){
             if (this.routes[i].name === name && this.routes[i].method === method && this.routes[i].checkArguments(parameters)){
@@ -241,6 +272,15 @@ cov.api.rest.Api = class{
     callRoute( method, name, parameters, url_params){
         const _this = this;
         return new Promise( (resolve, reject) => {
+            if (!cov.utils.isString(method) || !cov.utils.isString(name)){
+                return reject("incorrect types, method and name must be of type string");
+            }
+            if (!cov.utils.isObject(parameters) && !cov.utils.isUndefined(parameters)){
+                return reject("incorrect type, parameters must be of type object");
+            }
+            if (!cov.utils.isObject(url_params) && !cov.utils.isUndefined(url_params)){
+                return reject("incorrect type, url_params must be of type object");
+            }
             let route = _this.getRoute(method, name, parameters);
             if (route === null) {
                 return reject("the route doesn't exist");
@@ -292,6 +332,9 @@ cov.api.rest.Api = class{
 cov.api.rest.Route = class{
 
     constructor(base_url, route, method, name, version){
+        if (!cov.utils.isString(base_url) || !cov.utils.isString(route) || !cov.utils.isString(method) || !cov.utils.isString(name) || !cov.utils.isString(version)){
+            throw new Error( "arguments must be of type string");
+        }
         this.base_url = base_url;
         this.url = base_url + "/" + route;
         this.route = route;
@@ -303,8 +346,11 @@ cov.api.rest.Route = class{
     prepareUrl(parameters){
         let url_arr = this.url.split("/");
         let i, url = "", reg = /^{.*}$/, n;
-        if (typeof parameters !== "object"){
+        if (cov.utils.isUndefined(parameters)){
             parameters = {};
+        }
+        if (!cov.utils.isObject(parameters)){
+            throw new Error( "parameters must be of type object");
         }
         parameters.version = this.version;
         for (i = 0; i < url_arr.length; i++){
@@ -326,8 +372,11 @@ cov.api.rest.Route = class{
         let arr,reg,needed,has;
         arr = this.url.split("/");
         reg = /^{.*}$/;
-        if (typeof parameters !== "object"){
+        if (cov.utils.isUndefined(parameters)){
             parameters = {};
+        }
+        if (!cov.utils.isObject(parameters)){
+            throw new Error( "parameters must be of type object");
         }
         parameters.version = this.version;
         needed = arr.filter(value => reg.test(value));
@@ -349,18 +398,25 @@ cov.api.node.Api = class extends cov.api.rest.Api{
         this.nodes = [];
     }
 
-    objectFieldToString( fields){
-        let keys = Object.keys( fields);
-        let str = "{";
-        let x = {test,bla,tickets:{test,bla}};
-    }
-
     getAll( nodeName, fields){
         const _this = this;
         return new Promise((resolve,reject) => {
+            if (!cov.utils.isString(fields)){
+                return reject( "fields must be of type string");
+            }
+            if (!cov.utils.isString(nodeName)){
+                return reject( "nodeName must be of type string");
+            }
             let parameters = {fields: fields};
             _this.callRoute( "GET", "getAllNode", {node: nodeName}, parameters).then(response=>{
-                resolve(response.response);
+                let objects = response.response;
+                let node = _this.getNodeObject(nodeName);
+                for (let i = 0; i < objects.length; i++){
+                    if (!node.checkResponse(objects[i])){
+                        return reject("The response is not conform to specs");
+                    }
+                }
+                resolve(objects);
             }).catch(reject);
         });
     }
@@ -368,15 +424,36 @@ cov.api.node.Api = class extends cov.api.rest.Api{
     get( nodeName, id, fields){
         const _this = this;
         return new Promise((resolve,reject) => {
+            if (!cov.utils.isString(fields)){
+                return reject( "fields must be of type string");
+            }
+            if (!cov.utils.isString(nodeName)){
+                return reject( "nodeName must be of type string");
+            }
+            if (!cov.utils.isNumber(id) && !cov.utils.isString(id)){
+                return reject( "id must be of type string or number");
+            }
             let parameters = {fields: fields};
             _this.callRoute( "GET", "getNode", {node: nodeName,id: id}, parameters).then(response=>{
-                resolve(response.response);
+                let object = response.response;
+                let node = _this.getNodeObject(nodeName);
+                if (node.checkResponse( object)){
+                    resolve(response.object);
+                }else{
+                    reject("The response is not conform to specs");
+                }
             }).catch(reject);
         });
     }
 
 
     addNode( name, fields){
+        if (!cov.utils.isObject(fields) && !cov.utils.isUndefined(fields)){
+            return reject( "fields must be of type object");
+        }
+        if (!cov.utils.isString(name)){
+            return reject( "name must be of type string");
+        }
         let node = new cov.api.node.Node(name)
         this.nodes.push(node);
         if (typeof fields === "object"){
@@ -388,6 +465,9 @@ cov.api.node.Api = class extends cov.api.rest.Api{
     }
 
     getNodeObject( name){
+        if (!cov.utils.isString(name)){
+            return reject( "name must be of type string");
+        }
         for( let i = 0; i < this.nodes.length; i++){
             if (this.nodes[i].name === name){
                 return this.nodes[i];
@@ -397,6 +477,9 @@ cov.api.node.Api = class extends cov.api.rest.Api{
     }
 
     addFieldToNode( nodeName, fieldName, fieldType){
+        if (!cov.utils.isString(nodeName) || !cov.utils.isString(fieldName) || !cov.utils.isString(fieldType)){
+            return reject( "arguments must be of type string");
+        }
         let node = this.getNodeObject(nodeName);
         if (node === null){
             return false;
@@ -409,11 +492,66 @@ cov.api.node.Api = class extends cov.api.rest.Api{
 cov.api.node.Node = class{
 
     constructor( name){
+        if (!cov.utils.isString(name)){
+            throw new Error( "name must be of type string");
+        }
         this.name = name;
         this.fields = {};
     }
 
     addField( name, type){
+        if (!cov.utils.isString(name) || !cov.utils.isString(type)){
+            throw new Error( "arguments must be of type string");
+        }
         this.fields[name] = type;
+    }
+
+    checkType( object, type){
+        if (!cov.utils.isString(type)){
+            throw new Error( "type must be of type string");
+        }
+        let number = ["int","number","double","float"];
+        let string = ["string"];
+        if (type.substr(-2) === "[]"){
+            if (typeof object !== "object" && typeof object !== "array"){
+                return false;
+            }
+            if (object.constructor.name !== "Array"){
+                return false;
+            }
+            for (let i = 0; i < object.length; i++){
+                if (!this.checkType(object[i], type.substr(0, type.length-2))){
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        if (number.includes(type)){
+            return cov.utils.isNumber(object);
+        }
+        if (string.includes(type)){
+            return cov.utils.isString(object);
+        }
+        console.warn("Unknown type",object);
+        return true;
+    }
+
+    checkResponse( response){
+        if (!cov.utils.isObject(response)){
+            return false;
+        }
+        let keys = Object.keys(response);
+
+        for (let i = 0; i < keys.length; i++){
+            if (typeof this.fields[keys[i]] === "string"){
+                if (!this.checkType(response[keys[i]], this.fields[keys[i]])){
+                    return false;
+                }
+            }else{
+                return false;
+            }
+        }
+        return true;
     }
 }
