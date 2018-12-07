@@ -34,7 +34,7 @@ if(typeof cov.utils.httpRequest==="undefined"){
         cov.utils.httpRequest.requests[xhr.requestId] = 0;
         setTimeout( ()=>{
             let keys = Object.keys(cov.utils.httpRequest.requests);
-            let lify = cov.utils.httpRequest.requests[xhr.requestId] > 0;
+            let lify = cov.utils.httpRequest.requests[xhr.requestId] < 1;
             if (lify !== cov.utils.httpRequest.lify){
                 let done = false;
                 cov.utils.httpRequest.callbacks.forEach( callback => {
