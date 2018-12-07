@@ -5,59 +5,9 @@ cov.api.rest={};
 cov.api.node={};
 
 
-if (typeof cov.utils === "undefined"){
-    cov.utils={};
-}
+if(typeof cov.utils==="undefined"){cov.utils={}}
+if(typeof cov.utils.httpRequest==="undefined"){cov.utils.httpRequest=(method,url,headers,body)=>new Promise((r,e)=>{const xhr=new XMLHttpRequest();xhr.open(method,url,!0);xhr.onload=()=>{cov.utils.httpRequest.requests[xhr.requestId]=1;r(xhr)};xhr.onerror=()=>{cov.utils.httpRequest.requests[xhr.requestId]=2;e(xhr)};xhr.requestId=btoa(JSON.stringify({time:Date.now(),url:url,headers:headers,method:method,body:body}));if(typeof headers==="object"){Object.keys(headers).forEach(v=>xhr.setRequestHeader(v,headers[v]))}if(typeof body!=="undefined"){xhr.send(body)}else{xhr.send()}cov.utils.httpRequest.requests[xhr.requestId]=0;setTimeout(()=>{let keys=Object.keys(cov.utils.httpRequest.requests);let liefi=cov.utils.httpRequest.requests[xhr.requestId]<1;if(liefi!==cov.utils.httpRequest.liefi){let done=!1;cov.utils.httpRequest.callbacks.forEach(callback=>{if(typeof callback==="function"){callback(liefi);done=!0}});if(!done&&liefi){alert("WARNING, LIE-FI detected (a very slow connection)")}}cov.utils.httpRequest.liefi=liefi},20000)});cov.utils.httpRequest.requests={};cov.utils.httpRequest.liefi=!1;cov.utils.httpRequest.callbacks=[];cov.utils.httpRequest.onLiefi=function(callback){cov.utils.httpRequest.callbacks.push(callback)}}
 
-if(typeof cov.utils.httpRequest==="undefined"){
-
-    cov.utils.httpRequest=(method,url,headers,body)=>new Promise((r,e)=>{
-        const xhr=new XMLHttpRequest();
-        xhr.open(method,url,true);
-        xhr.onload=()=>{
-            cov.utils.httpRequest.requests[xhr.requestId] = 1;
-            r(xhr);
-        };
-        xhr.onerror=()=>{
-            cov.utils.httpRequest.requests[xhr.requestId] = 2;
-            e(xhr);
-        };
-        xhr.requestId = btoa(JSON.stringify({time: Date.now(), url: url, headers: headers, method: method, body: body}));
-        if(typeof headers==="object"){
-            Object.keys(headers).forEach(v=>xhr.setRequestHeader(v,headers[v]));
-        }
-        if(typeof body!=="undefined"){
-            xhr.send(body);
-        }else{
-            xhr.send();
-        }
-        cov.utils.httpRequest.requests[xhr.requestId] = 0;
-        setTimeout( ()=>{
-            let keys = Object.keys(cov.utils.httpRequest.requests);
-            let lify = cov.utils.httpRequest.requests[xhr.requestId] < 1;
-            if (lify !== cov.utils.httpRequest.lify){
-                let done = false;
-                cov.utils.httpRequest.callbacks.forEach( callback => {
-                    if (typeof callback === "function"){
-                        callback(lify);
-                        done = true;
-                    }
-                });
-                if (!done && lify){
-                    alert( "WARNING, LIFY detected (a very slow connection)");
-                }
-            }
-
-            cov.utils.httpRequest.lify = lify;
-        }, 20000);
-    });
-    cov.utils.httpRequest.requests = {};
-    cov.utils.httpRequest.lify = false;
-    cov.utils.httpRequest.callbacks = [];
-    cov.utils.httpRequest.onLify = function(callback){
-        cov.utils.httpRequest.callbacks.push(callback);
-    };
-}
 if(typeof cov.utils.isNumber==="undefined"){cov.utils.isNumber=object=>typeof object==="number";}
 if(typeof cov.utils.isString==="undefined"){cov.utils.isString=object=>(typeof object==="string")||(object instanceof String);}
 if(typeof cov.utils.isBoolean==="undefined"){cov.utils.isBoolean=object=>typeof object==="boolean";}
