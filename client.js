@@ -310,7 +310,16 @@ cov.api.rest.Api = class{
                             return reject(json);
                         }
                     })
-                    .catch( err => reject(err));
+                    .catch( err => {
+                        if (err === "token expired"){
+                            _this.refreshToken()
+                                .then(r=>_this.callRoute(method, name, parameters, url_params))
+                                .then(resolve)
+                                .catch(reject);
+                        }else{
+                            reject(err);
+                        }
+                    });
             }else{
                 cov.utils.httpRequest(method, url, headers)
                     .then(result => {
@@ -438,7 +447,7 @@ cov.api.node.Api = class extends cov.api.rest.Api{
                 let object = response.response;
                 let node = _this.getNodeObject(nodeName);
                 if (node.checkResponse( object)){
-                    resolve(response.object);
+                    resolve(object);
                 }else{
                     reject("The response is not conform to specs");
                 }
@@ -513,7 +522,7 @@ cov.api.node.Node = class{
         let number = ["int","number","double","float"];
         let string = ["string"];
         if (type.substr(-2) === "[]"){
-            if (typeof object !== "object" && typeof object !== "array"){
+            if (typeof object !== "object"){
                 return false;
             }
             if (object.constructor.name !== "Array"){
@@ -528,12 +537,11 @@ cov.api.node.Node = class{
         }
 
         if (number.includes(type)){
-            return cov.utils.isNumber(object);
+            return cov.utils.isNumber(object) || object === null;
         }
         if (string.includes(type)){
-            return cov.utils.isString(object);
+            return cov.utils.isString(object) || object === null;
         }
-        console.warn("Unknown type",object);
         return true;
     }
 
